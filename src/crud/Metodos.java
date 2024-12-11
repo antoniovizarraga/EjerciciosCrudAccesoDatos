@@ -2,10 +2,73 @@ package crud;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 public class Metodos {
+
+	private static final String USUARIO = "avizarraga";
+	private static final String CONTA = "12345";
+	private static final String DB_URL = "jdbc:mysql://dns11036.phdns11.es/ad2425_avizarraga";
+	private static final String USE = "use ad2425_avizarraga;";
+
+	/**
+	 * Función que obtiene la última Id de una tabla pasada por parámetro y la
+	 * devuelve. Si no encuentra una Id porque la tabla está vacía, te devuelve un
+	 * entero con valor 0 o te imprime en pantalla/terminal el error.
+	 * 
+	 * @param tableName El nombre de la tabla sobre la cuál quieres saber la última
+	 *                  Id
+	 * @return un Int con la última Id de la tabla.
+	 */
+	private static int obtenerUltimaId(String tableName) {
+
+		int res = 0;
+
+		String tablaMinus = tableName.toLowerCase();
+		String id = "";
+
+		switch (tablaMinus) {
+
+		case "paciente", "pacientes":
+			id = "idPaciente";
+			break;
+		case "medicamentos", "medicamento":
+			id = "idMedicamento";
+			break;
+		case "receta", "recetas":
+			id = "idReceta";
+			break;
+
+		default:
+			id = "id";
+
+		}
+
+		String consulta = "SELECT " + id + " FROM " + tableName + " ORDER BY " + id + " DESC LIMIT 1";
+
+		ResultSet consultaRes = ejecutarConsulta(consulta);
+
+		try {
+			consultaRes.next();
+
+			res = consultaRes.getInt(1);
+
+		} catch (SQLException e) {
+			System.err.println("Error: " + e.toString());
+		} finally {
+			try {
+				consultaRes.close();
+			} catch (SQLException e) {
+				System.err.println("Error: " + e.toString());
+			}
+		}
+
+		return res;
+
+	}
 
 	/**
 	 * Función que ejecuta cualquier operación de MySQL (Insertar/Crear, Actualizar
@@ -20,24 +83,16 @@ public class Metodos {
 	 * @return Un boolean indicando si se pudo ejecutar la consulta correctamente o
 	 *         no.
 	 */
-	public static boolean conectar(String sql) {
+	private static boolean ejecutarComando(String sql) {
 		boolean res = false;
 		Statement stmt = null;
 		Connection connect = null;
-		// JDBC driver name and database URL
-		String JDBC_DRIVER = "com.mysql.jdbc.Driver";
-		final String DB_URL = "jdbc:mysql://dns11036.phdns11.es/ad2425_avizarraga";
-		String USUARIO = "avizarraga";
-		String CONTA = "12345";
-
-		String use = "use ad2425_avizarraga;";
-
 		try {
 			connect = DriverManager.getConnection(DB_URL, USUARIO, CONTA);
 
 			stmt = connect.createStatement();
 
-			stmt.execute(use);
+			stmt.execute(USE);
 			stmt.execute(sql);
 
 			res = true;
@@ -48,6 +103,42 @@ public class Metodos {
 
 		return res;
 
+	}
+
+	/**
+	 * Función que se encarga de ejecutar una consulta en MySQL pasada por parámetro
+	 * y te devuelve un ResultSet con todas las filas que devuelva la base de datos.
+	 * 
+	 * @param sql La consulta a ejecutar en la base de datos
+	 * @return Un ResultSet que contiene todas las filas que devuelve la consulta.
+	 *         Para leer su contenido, tendrás que hacer un bucle while y usar el
+	 *         método next() para pasar de una fila a otra. Inicialmente empieza en
+	 *         0 (Una fila vacía), y a cada next que hagas irá pasando de fila en
+	 *         fila. Luego con métodos como: getInt(numeroColumna),
+	 *         getString(numeroColumna)... Etc irás recogiendo los valores de sus
+	 *         respectivas columnas con sus respectivos tipos primitivos. Los
+	 *         valores de: "numeroColumna" empiezan inicialmente en 1, por lo que la
+	 *         primera columna de una fila es 1.
+	 */
+	private static ResultSet ejecutarConsulta(String sql) {
+
+		Connection connect = null;
+
+		ResultSet resultado = null;
+
+		try {
+			connect = DriverManager.getConnection(DB_URL, USUARIO, CONTA);
+
+			// Paso 1 establecer conexión + pasar la consulta
+			PreparedStatement stat = connect.prepareStatement(sql);
+
+			// Paso 2. Definir resultSet y ejecutar la consulta
+			resultado = stat.executeQuery();
+		} catch (SQLException e) {
+			System.err.println("Error: " + e.toString());
+		}
+
+		return resultado;
 	}
 
 	/**
@@ -70,6 +161,9 @@ public class Metodos {
 
 		String tabla = "";
 
+		boolean existePacientes = ejecutarComando("SELECT * FROM Pacientes LIMIT 1");
+		boolean existeMedicamentos = ejecutarComando("SELECT * FROM Medicamentos LIMIT 1");
+
 		boolean connectionState = false;
 
 		if (nombreTabla != null && !nombreTabla.equals("")) {
@@ -91,7 +185,17 @@ public class Metodos {
 			break;
 
 		case "receta", "recetas":
-			res = "La tabla: \"Receta\" no se puede crear debido a que contiene relaciones con tablas maestras (Pacientes y Medicamentos). ";
+			if (!existePacientes && !existeMedicamentos) {
+				res = "La tabla: \"Receta\" no se puede crear debido a que contiene relaciones con tablas maestras (Pacientes y Medicamentos). ";
+			} else {
+				sql = "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int,\r\n" + "idPaciente Int,\r\n"
+						+ "idMedicamento Int,\r\n" + "fechaFin DATE,\r\n"
+						+ "FOREIGN KEY (idPaciente) REFERENCES Pacientes(idPaciente),\r\n"
+						+ "FOREIGN KEY (idMedicamento) REFERENCES Medicamentos(idMedicamento),\r\n"
+						+ "PRIMARY KEY (idReceta)\r\n" + ");";
+				res = "Tabla Receta creada correctamente";
+			}
+
 			break;
 
 		default:
@@ -111,7 +215,7 @@ public class Metodos {
 		}
 
 		if (!sql.equals("")) {
-			connectionState = conectar(sql);
+			connectionState = ejecutarComando(sql);
 		}
 
 		if (!connectionState) {
@@ -120,9 +224,36 @@ public class Metodos {
 
 		return res;
 	}
-	
+
+	public static String insertarDatos(String tabla, String datosTabla) {
+		String res = "";
+
+		StringBuilder sql = new StringBuilder();
 		
-	
-	
+		sql.append("INSERT INTO " + tabla + " ");
+
+		String[] datos = datosTabla.split("\n");
+
+		String tablaMinus = tabla.toLowerCase();
+
+		
+		
+		
+
+		switch (tablaMinus) {
+
+		case "pacientes", "paciente":
+
+			sql.append("( Nombre, ");
+
+			for (String campo : datos) {
+
+			}
+			break;
+
+		}
+
+		return res;
+	}
 
 }
