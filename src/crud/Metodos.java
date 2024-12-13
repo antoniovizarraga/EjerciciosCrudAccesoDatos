@@ -173,13 +173,13 @@ public class Metodos {
 		switch (tabla) {
 
 		case "pacientes", "paciente":
-			sql = "CREATE TABLE Pacientes(\r\n" + "idPaciente Int,\r\n" + "Nombre VarChar(45),\r\n"
+			sql = "CREATE TABLE Pacientes(\r\n" + "idPaciente Int NOT NULL AUTO_INCREMENT,\r\n" + "Nombre VarChar(45),\r\n"
 					+ "NSS VarChar(45),\r\n" + "PRIMARY KEY (idPaciente)\r\n" + ");";
 			res = "Tabla Pacientes creada correctamente";
 			break;
 
 		case "medicamentos", "medicamento":
-			sql = "CREATE TABLE Medicamentos(\r\n" + "idMedicamento Int,\r\n" + "Composición VarChar(45),\r\n"
+			sql = "CREATE TABLE Medicamentos(\r\n" + "idMedicamento Int NOT NULL AUTO_INCREMENT,\r\n" + "Composición VarChar(45),\r\n"
 					+ "PRIMARY KEY (idMedicamento)\r\n" + ");";
 			res = "Tabla Medicamentos creada correctamente";
 			break;
@@ -188,7 +188,7 @@ public class Metodos {
 			if (!existePacientes && !existeMedicamentos) {
 				res = "La tabla: \"Receta\" no se puede crear debido a que contiene relaciones con tablas maestras (Pacientes y Medicamentos). ";
 			} else {
-				sql = "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int,\r\n" + "idPaciente Int,\r\n"
+				sql = "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int NOT NULL AUTO_INCREMENT,\r\n" + "idPaciente Int,\r\n"
 						+ "idMedicamento Int,\r\n" + "fechaFin DATE,\r\n"
 						+ "FOREIGN KEY (idPaciente) REFERENCES Pacientes(idPaciente),\r\n"
 						+ "FOREIGN KEY (idMedicamento) REFERENCES Medicamentos(idMedicamento),\r\n"
@@ -200,12 +200,12 @@ public class Metodos {
 
 		default:
 
-			sql = "CREATE TABLE Pacientes(\r\n" + "idPaciente Int,\r\n" + "Nombre VarChar(45),\r\n"
+			sql = "CREATE TABLE Pacientes(\r\n" + "idPaciente Int NOT NULL AUTO_INCREMENT,\r\n" + "Nombre VarChar(45),\r\n"
 					+ "NSS VarChar(45),\r\n" + "PRIMARY KEY (idPaciente)\r\n" + ");";
-			sql += "\r\n" + "CREATE TABLE Medicamentos(\r\n" + "idMedicamento Int,\r\n" + "Composición VarChar(45),\r\n"
+			sql += "\r\n" + "CREATE TABLE Medicamentos(\r\n" + "idMedicamento Int NOT NULL AUTO_INCREMENT,\r\n" + "Composición VarChar(45),\r\n"
 					+ "PRIMARY KEY (idMedicamento)\r\n" + ");" + "";
 
-			sql += "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int,\r\n" + "idPaciente Int,\r\n"
+			sql += "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int NOT NULL AUTO_INCREMENT,\r\n" + "idPaciente Int,\r\n"
 					+ "idMedicamento Int,\r\n" + "fechaFin DATE,\r\n"
 					+ "FOREIGN KEY (idPaciente) REFERENCES Pacientes(idPaciente),\r\n"
 					+ "FOREIGN KEY (idMedicamento) REFERENCES Medicamentos(idMedicamento),\r\n"
@@ -225,6 +225,7 @@ public class Metodos {
 		return res;
 	}
 
+	
 	public static String insertarDatos(String tabla, String datosTabla) {
 		String res = "";
 
@@ -236,22 +237,58 @@ public class Metodos {
 
 		String tablaMinus = tabla.toLowerCase();
 
-		
+		boolean connectionState = false;
+
 		
 		
 
 		switch (tablaMinus) {
-
-		case "pacientes", "paciente":
-
-			sql.append("( Nombre, ");
-
-			for (String campo : datos) {
-
-			}
-			break;
+	
+			case "pacientes", "paciente":
+	
+				sql.append("( Nombre, NSS ) VALUES (");
+	
+				for (String campo : datos) {
+					sql.append("'" + campo + "',");
+				}
+				
+				sql.deleteCharAt(sql.length() - 1);
+				
+				sql.append(");");
+				
+				break;
+				
+			case "medicamentos", "medicamento":
+				
+				sql.append("( Composición ) VALUES (" + datosTabla + ");");
+				
+				break;
+				
+			case "receta", "recetas":
+				
+				sql.append("( idPaciente, idMedicamento, fechaFin ) VALUES (");
+			
+				for (String campo : datos) {
+					
+					sql.append("'" + campo + "',");
+				}
+				
+				sql.deleteCharAt(sql.length() - 1);
+				
+				sql.append(");");
+				
+				break;
 
 		}
+		
+		if (!sql.toString().contains("")) {
+			connectionState = ejecutarComando(sql.toString());
+		}
+
+		if (!connectionState) {
+			res = "No se pudo realizar la conexión con la base de datos";
+		}
+		
 
 		return res;
 	}
