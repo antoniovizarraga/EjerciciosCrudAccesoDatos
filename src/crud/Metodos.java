@@ -6,6 +6,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.Normalizer;
+import java.util.Scanner;
 
 public class Metodos {
 
@@ -52,9 +54,9 @@ public class Metodos {
 		ResultSet consultaRes = ejecutarConsulta(consulta);
 
 		try {
-			consultaRes.next();
-
-			res = consultaRes.getInt(1);
+			while (consultaRes.next()) {
+				res = consultaRes.getInt(1);
+			}
 
 		} catch (SQLException e) {
 			System.err.println("Error: " + e.toString());
@@ -70,34 +72,83 @@ public class Metodos {
 
 	}
 
+	private static boolean confirmarOperacion(Connection connect) {
+		boolean res = false;
+
+		return res;
+	}
+
 	/**
 	 * Función que ejecuta cualquier operación de MySQL (Insertar/Crear, Actualizar
-	 * y Borrar) que se le pase por parámetro. Si no logra conectar con la base de
-	 * datos, devolverá un boolean indicando si se pudo hacer la conexión
-	 * correctamente y pudo realizar la operación (true) o no (false). Si se diera
-	 * el caso en que no puede conectarse a la base de datos o que la consulta SQL
-	 * no es correcta, la función imprimirá por consola un String indicando el
-	 * error.
+	 * y Borrar) que se le pase por parámetro, con opción a hacerlo con una
+	 * transacción (Boolean). Si no logra conectar con la base de datos, devolverá
+	 * un boolean indicando si se pudo hacer la conexión correctamente y pudo
+	 * realizar la operación (true) o no (false). Si se diera el caso en que no
+	 * puede conectarse a la base de datos o que la consulta SQL no es correcta, la
+	 * función imprimirá por consola un String indicando el error.
 	 * 
-	 * @param sql La operación o consulta MySQL a ejecutar en la función.
+	 * @param sql         La operación o consulta MySQL a ejecutar en la función.
+	 * @param transaction Booleano que indica si la consulta de MySQL que se quiere
+	 *                    realizar se desea hacer en una transacción. Si es true,
+	 *                    preguntará al usuario si quiere confirmar la operación o
+	 *                    no. Si es false, ejecutará la consulta sin ninguna
+	 *                    transacción. Imprimirá por consola un mensaje, indicando
+	 *                    al usuario si desea realizar los cambios o no.
 	 * @return Un boolean indicando si se pudo ejecutar la consulta correctamente o
 	 *         no.
 	 */
-	private static boolean ejecutarComando(String sql) {
+	private static boolean ejecutarComando(String sql, boolean transaction) {
 		boolean res = false;
 		Statement stmt = null;
 		Connection connect = null;
+
+		String userInput = "";
+
+		Scanner sc = new Scanner(System.in);
+
 		try {
 			connect = DriverManager.getConnection(DB_URL, USUARIO, CONTA);
+			connect.setAutoCommit(!transaction);
 
 			stmt = connect.createStatement();
 
 			stmt.execute(USE);
+
 			stmt.execute(sql);
+
+			if (transaction) {
+
+				System.out.println("¿Está seguro de que quiere realizar los cambios?" + "\n"
+						+ "Una vez aplicados los cambios, no podrán deshacerse." + "\n"
+						+ "Escriba: \"Si\" para aplicar los cambios o: \"No\" para deshacerlos.");
+
+				userInput = sc.nextLine();
+
+				userInput = userInput.replace("í", "i");
+
+				if (userInput.equalsIgnoreCase("si")) {
+					connect.commit();
+					System.out.println("Cambios aplicados.");
+				} else {
+					connect.rollback();
+					System.out.println("Cambios deshechos.");
+				}
+
+			}
+
+			sc.close();
 
 			res = true;
 		} catch (SQLException e) {
-			System.err.println("Error: " + e.toString());
+			System.err.println("Error: " + e.getMessage());
+			if (transaction) {
+				try {
+					connect.rollback();
+				} catch (SQLException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
 
 		}
 
@@ -161,8 +212,8 @@ public class Metodos {
 
 		String tabla = "";
 
-		boolean existePacientes = ejecutarComando("SELECT * FROM Pacientes LIMIT 1");
-		boolean existeMedicamentos = ejecutarComando("SELECT * FROM Medicamentos LIMIT 1");
+		boolean existePacientes = ejecutarComando("SELECT * FROM Pacientes LIMIT 1", false);
+		boolean existeMedicamentos = ejecutarComando("SELECT * FROM Medicamentos LIMIT 1", false);
 
 		boolean connectionState = false;
 
@@ -173,14 +224,14 @@ public class Metodos {
 		switch (tabla) {
 
 		case "pacientes", "paciente":
-			sql = "CREATE TABLE Pacientes(\r\n" + "idPaciente Int NOT NULL AUTO_INCREMENT,\r\n" + "Nombre VarChar(45),\r\n"
-					+ "NSS VarChar(45),\r\n" + "PRIMARY KEY (idPaciente)\r\n" + ");";
+			sql = "CREATE TABLE Pacientes(\r\n" + "idPaciente Int NOT NULL AUTO_INCREMENT,\r\n"
+					+ "Nombre VarChar(45),\r\n" + "NSS VarChar(45),\r\n" + "PRIMARY KEY (idPaciente)\r\n" + ");";
 			res = "Tabla Pacientes creada correctamente";
 			break;
 
 		case "medicamentos", "medicamento":
-			sql = "CREATE TABLE Medicamentos(\r\n" + "idMedicamento Int NOT NULL AUTO_INCREMENT,\r\n" + "Composición VarChar(45),\r\n"
-					+ "PRIMARY KEY (idMedicamento)\r\n" + ");";
+			sql = "CREATE TABLE Medicamentos(\r\n" + "idMedicamento Int NOT NULL AUTO_INCREMENT,\r\n"
+					+ "Composición VarChar(45),\r\n" + "PRIMARY KEY (idMedicamento)\r\n" + ");";
 			res = "Tabla Medicamentos creada correctamente";
 			break;
 
@@ -188,8 +239,8 @@ public class Metodos {
 			if (!existePacientes && !existeMedicamentos) {
 				res = "La tabla: \"Receta\" no se puede crear debido a que contiene relaciones con tablas maestras (Pacientes y Medicamentos). ";
 			} else {
-				sql = "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int NOT NULL AUTO_INCREMENT,\r\n" + "idPaciente Int,\r\n"
-						+ "idMedicamento Int,\r\n" + "fechaFin DATE,\r\n"
+				sql = "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int NOT NULL AUTO_INCREMENT,\r\n"
+						+ "idPaciente Int,\r\n" + "idMedicamento Int,\r\n" + "fechaFin DATE,\r\n"
 						+ "FOREIGN KEY (idPaciente) REFERENCES Pacientes(idPaciente),\r\n"
 						+ "FOREIGN KEY (idMedicamento) REFERENCES Medicamentos(idMedicamento),\r\n"
 						+ "PRIMARY KEY (idReceta)\r\n" + ");";
@@ -200,13 +251,13 @@ public class Metodos {
 
 		default:
 
-			sql = "CREATE TABLE Pacientes(\r\n" + "idPaciente Int NOT NULL AUTO_INCREMENT,\r\n" + "Nombre VarChar(45),\r\n"
-					+ "NSS VarChar(45),\r\n" + "PRIMARY KEY (idPaciente)\r\n" + ");";
-			sql += "\r\n" + "CREATE TABLE Medicamentos(\r\n" + "idMedicamento Int NOT NULL AUTO_INCREMENT,\r\n" + "Composición VarChar(45),\r\n"
-					+ "PRIMARY KEY (idMedicamento)\r\n" + ");" + "";
+			sql = "CREATE TABLE Pacientes(\r\n" + "idPaciente Int NOT NULL AUTO_INCREMENT,\r\n"
+					+ "Nombre VarChar(45),\r\n" + "NSS VarChar(45),\r\n" + "PRIMARY KEY (idPaciente)\r\n" + ");";
+			sql += "\r\n" + "CREATE TABLE Medicamentos(\r\n" + "idMedicamento Int NOT NULL AUTO_INCREMENT,\r\n"
+					+ "Composición VarChar(45),\r\n" + "PRIMARY KEY (idMedicamento)\r\n" + ");" + "";
 
-			sql += "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int NOT NULL AUTO_INCREMENT,\r\n" + "idPaciente Int,\r\n"
-					+ "idMedicamento Int,\r\n" + "fechaFin DATE,\r\n"
+			sql += "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int NOT NULL AUTO_INCREMENT,\r\n"
+					+ "idPaciente Int,\r\n" + "idMedicamento Int,\r\n" + "fechaFin DATE,\r\n"
 					+ "FOREIGN KEY (idPaciente) REFERENCES Pacientes(idPaciente),\r\n"
 					+ "FOREIGN KEY (idMedicamento) REFERENCES Medicamentos(idMedicamento),\r\n"
 					+ "PRIMARY KEY (idReceta)\r\n" + ");";
@@ -215,7 +266,7 @@ public class Metodos {
 		}
 
 		if (!sql.equals("")) {
-			connectionState = ejecutarComando(sql);
+			connectionState = ejecutarComando(sql, false);
 		}
 
 		if (!connectionState) {
@@ -225,12 +276,24 @@ public class Metodos {
 		return res;
 	}
 
-	
+	/**
+	 * Función que inserta datos en la tabla que se le indique. Tanto la tabla como
+	 * los datos a insertar se pasan como parámetros (String) en la función. Luego
+	 * devuelve una cadena indicando si se pudo realizar la operación con éxito o
+	 * no. Siempre devuelve una cadena, nunca estará vacía ni será null. Los datos a
+	 * insertar en la tabla tienen que contener únicamente el valor que se quiera
+	 * insertar en la tabla, cada valor separado por un intro (\n).
+	 * 
+	 * @param tabla      El nombre de la tabla donde insertar los datos.
+	 * @param datosTabla Los datos a insertar en la tabla. Cada valor a insertar en
+	 *                   la tabla debe estar separado por un intro.
+	 * @return Un String indicando si se pudo realizar la inserción o no.
+	 */
 	public static String insertarDatos(String tabla, String datosTabla) {
-		String res = "";
+		String res = "Inserción de datos correcta.";
 
 		StringBuilder sql = new StringBuilder();
-		
+
 		sql.append("INSERT INTO " + tabla + " ");
 
 		String[] datos = datosTabla.split("\n");
@@ -239,56 +302,180 @@ public class Metodos {
 
 		boolean connectionState = false;
 
-		
-		
-
 		switch (tablaMinus) {
-	
-			case "pacientes", "paciente":
-	
-				sql.append("( Nombre, NSS ) VALUES (");
-	
-				for (String campo : datos) {
-					sql.append("'" + campo + "',");
-				}
-				
-				sql.deleteCharAt(sql.length() - 1);
-				
-				sql.append(");");
-				
-				break;
-				
-			case "medicamentos", "medicamento":
-				
-				sql.append("( Composición ) VALUES (" + datosTabla + ");");
-				
-				break;
-				
-			case "receta", "recetas":
-				
-				sql.append("( idPaciente, idMedicamento, fechaFin ) VALUES (");
-			
-				for (String campo : datos) {
-					
-					sql.append("'" + campo + "',");
-				}
-				
-				sql.deleteCharAt(sql.length() - 1);
-				
-				sql.append(");");
-				
-				break;
+
+		case "pacientes", "paciente":
+
+			sql.append("( Nombre, NSS ) VALUES (");
+
+			for (String campo : datos) {
+				sql.append("'" + campo + "',");
+			}
+
+			sql.deleteCharAt(sql.length() - 1);
+
+			sql.append(");");
+
+			break;
+
+		case "medicamentos", "medicamento":
+
+			sql.append("( Composición ) VALUES (" + datosTabla + ");");
+
+			break;
+
+		case "receta", "recetas":
+
+			sql.append("( idPaciente, idMedicamento, fechaFin ) VALUES (");
+
+			for (String campo : datos) {
+
+				sql.append("'" + campo + "',");
+			}
+
+			sql.deleteCharAt(sql.length() - 1);
+
+			sql.append(");");
+
+			break;
 
 		}
-		
+
 		if (!sql.toString().contains("")) {
-			connectionState = ejecutarComando(sql.toString());
+			connectionState = ejecutarComando(sql.toString(), false);
 		}
 
 		if (!connectionState) {
 			res = "No se pudo realizar la conexión con la base de datos";
 		}
-		
+
+		return res;
+	}
+
+	/**
+	 * Función que obtiene y devuelve como String el nombre de un paciente pasando
+	 * la Id (Int) de dicho paciente por parámetro. Si no encuentra el paciente,
+	 * devuelve una cadena vacía. Si ocurre un error en la consulta, imprime un
+	 * mensaje de error indicando el porqué de dicho error.
+	 * 
+	 * @param id El id del paciente que se desea obtener su nombre. Es de tipo int.
+	 * @return Un String indicando el nombre del paciente. Si no lo encuentra,
+	 *         devuelve una cadena vacía.
+	 */
+	public static String obtenerNombrePacientePorId(int id) {
+		String res = "";
+
+		String sql = "SELECT Nombre FROM Pacientes WHERE idPaciente = " + id + ";";
+
+		ResultSet resultado = ejecutarConsulta(sql);
+
+		try {
+			while (resultado.next()) {
+				res = resultado.getString("Nombre");
+			}
+
+		} catch (SQLException ex) {
+			System.err.println("Error ejecutando la consulta: " + sql);
+			System.err.println("Detalle del error: " + ex.getMessage());
+		}
+
+		return res;
+	}
+
+	public static String modificarDatosTabla(String tabla, String columna, String datos, String condicion) {
+		String res = "";
+
+		String sqlConsulta = "SELECT * " + "FROM " + tabla + " WHERE " + condicion + ";";
+
+		ResultSet datosOriginales;
+
+		String sql = "START TRANSACTION; UPDATE " + tabla + "SET " + columna + " = " + datos + " WHERE " + condicion
+				+ ";";
+
+		try {
+
+			datosOriginales = ejecutarConsulta(sqlConsulta);
+
+			System.out.println("Datos antes de la modificación: ");
+
+			while (datosOriginales.next()) {
+				System.out.println(columna + ": " + datosOriginales.getString(columna));
+			}
+		} catch (SQLException ex) {
+			System.out.println("Error al obtener los datos originales: " + ex.getMessage());
+		}
+
+		System.out.println("Datos después de la modificación: ");
+
+		System.out.println(columna + ": " + datos);
+
+		boolean state = ejecutarComando(sql, true);
+
+		if (!state) {
+			res = "Error: No se pudo actualizar la tabla " + tabla;
+
+		} else {
+
+			res = "Los datos se actualizaron correctamente.";
+		}
+
+		return res;
+	}
+
+	public static boolean borrarTablas(String tabla, String condicion) {
+		boolean res = false;
+
+		String sql = "";
+
+		String nomTabla = tabla.toLowerCase();
+
+		ResultSet datosOriginales = null;
+
+		if (condicion != null && !condicion.equals("")) {
+			sql = "DELETE FROM " + tabla + " WHERE " + condicion + ";";
+			datosOriginales = ejecutarConsulta("SELECT * FROM " + tabla + " WHERE " + condicion + ";");
+		} else if (condicion.equals("")) {
+			sql = "TRUNCATE " + tabla + ";";
+			datosOriginales = ejecutarConsulta("SELECT * FROM " + tabla + ";");
+		}
+
+		System.out.println("Datos antes de la modificación: ");
+
+		try {
+			switch (tabla) {
+
+			case "paciente", "pacientes":
+				while (datosOriginales.next()) {
+					System.out.println("ID Paciente: " + datosOriginales.getInt(1));
+					System.out.println("Nombre: " + datosOriginales.getString(2));
+					System.out.println("Apellidos: " + datosOriginales.getString(3));
+					System.out.println("NSS: " + datosOriginales.getString(4));
+				}
+				break;
+			case "medicamentos", "medicamento":
+				while (datosOriginales.next()) {
+					System.out.println("ID Medicamento: " + datosOriginales.getInt(1));
+					System.out.println("Composición: " + datosOriginales.getString(2));
+				}
+				break;
+
+			case "receta", "recetas":
+				while (datosOriginales.next()) {
+					System.out.println("ID Receta: " + datosOriginales.getInt(1));
+					System.out.println("ID Paciente: " + datosOriginales.getInt(2));
+					System.out.println("ID Medicamento: " + datosOriginales.getInt(3));
+					System.out.println("Fecha Fin: " + datosOriginales.getDate(4));
+				}
+				break;
+
+			}
+		} catch (SQLException e) {
+			System.err.println("Error al procesar los datos de la tabla: " + tabla);
+		    System.err.println("Causa: " + e.getMessage());
+		    e.printStackTrace();
+		}
+
+		res = ejecutarComando(sql, false);
 
 		return res;
 	}
