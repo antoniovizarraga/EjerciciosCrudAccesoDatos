@@ -191,6 +191,48 @@ public class Metodos {
 
 		return resultado;
 	}
+	
+	public static ResultSet listarTablas(String tabla, String condicion) {
+		ResultSet res = null;
+		
+		String nomTabla = "";
+		
+		String sql = "";
+		
+		if(tabla != null && !tabla.equals("")) {
+			
+			nomTabla = tabla.toLowerCase();
+			
+			switch(nomTabla) {
+			
+			case "paciente", "pacientes":
+				if(condicion != null && !condicion.equals("")) {
+					sql = "SELECT * FROM Pacientes WHERE " + condicion + ";";
+				} else {
+					sql = "SELECT * FROM Pacientes;";
+				}
+				
+				break;
+			case "medicamento", "medicamentos":
+				if(condicion != null && !condicion.equals("")) {
+					sql = "SELECT * FROM Medicamentos WHERE " + condicion + ";";
+				} else {
+					sql = "SELECT * FROM Medicamentos;";
+				}
+			case "receta", "recetas":
+				if(condicion != null && !condicion.equals("")) {
+					sql = "SELECT * FROM Recetas WHERE " + condicion + ";";
+				} else {
+					sql = "SELECT * FROM Recetas;";
+				}
+			
+			}
+		} 
+		
+		res = ejecutarConsulta(sql);
+		
+		return res;
+	}
 
 	/**
 	 * Función que crea todas las tablas de la base de datos. Si se desea crear
@@ -422,7 +464,30 @@ public class Metodos {
 		return res;
 	}
 
-	public static boolean borrarTablas(String tabla, String condicion) {
+	/**
+	 * Función que devuelve la cantidad de tablas que hay en la base de datos.
+	 * 
+	 * @return Un int que devuelve cuántas tablas existen en la Base de datos.
+	 *         Devuelve 0 si no encuentra ninguna.
+	 */
+	private static int cuantasTablas() {
+
+		int res = 0;
+
+		ResultSet cuantasTablas = ejecutarConsulta("SELECT count(*) FROM information_schema.tables;");
+
+		try {
+			cuantasTablas.next();
+			res = cuantasTablas.getInt(1);
+		} catch (SQLException e) {
+			System.err.println("Error al intentar obtener la cuenta de las tablas en la base de datos.");
+			System.err.println("Causa: " + e.getMessage());
+		}
+
+		return res;
+	}
+
+	public static boolean borrarDatos(String tabla, String condicion) {
 		boolean res = false;
 
 		String sql = "";
@@ -431,9 +496,12 @@ public class Metodos {
 
 		ResultSet datosOriginales = null;
 
+		int cantidadTablas = cuantasTablas();
+
 		if (condicion != null && !condicion.equals("")) {
 			sql = "DELETE FROM " + tabla + " WHERE " + condicion + ";";
 			datosOriginales = ejecutarConsulta("SELECT * FROM " + tabla + " WHERE " + condicion + ";");
+
 		} else if (condicion.equals("")) {
 			sql = "TRUNCATE " + tabla + ";";
 			datosOriginales = ejecutarConsulta("SELECT * FROM " + tabla + ";");
@@ -442,7 +510,8 @@ public class Metodos {
 		System.out.println("Datos antes de la modificación: ");
 
 		try {
-			switch (tabla) {
+
+			switch (nomTabla) {
 
 			case "paciente", "pacientes":
 				while (datosOriginales.next()) {
@@ -465,17 +534,71 @@ public class Metodos {
 					System.out.println("ID Paciente: " + datosOriginales.getInt(2));
 					System.out.println("ID Medicamento: " + datosOriginales.getInt(3));
 					System.out.println("Fecha Fin: " + datosOriginales.getDate(4));
+					nomTabla = "receta";
 				}
 				break;
 
 			}
 		} catch (SQLException e) {
 			System.err.println("Error al procesar los datos de la tabla: " + tabla);
-		    System.err.println("Causa: " + e.getMessage());
-		    e.printStackTrace();
+			System.err.println("Causa: " + e.getMessage());
+
 		}
 
-		res = ejecutarComando(sql, false);
+		if (cantidadTablas > 1 && nomTabla.equalsIgnoreCase("receta")) {
+			System.out.println("No se puede borrar la tabla: \"" + tabla
+					+ "\" porque hace referencia a otras tablas (Foreign Keys).");
+		} else {
+			res = ejecutarComando(sql, false);
+		}
+
+		return res;
+	}
+
+	public static boolean eliminarTablas(String tabla) {
+		boolean res = false;
+
+		String nomTabla = "";
+		
+		int cantidadTablas = cuantasTablas();
+
+		if (tabla != null && !tabla.equals("")) {
+
+			nomTabla = tabla.toLowerCase();
+
+			switch (nomTabla) {
+			case "paciente", "pacientes":
+				System.out.println("¡ATENCIÓN! Vas a borrar la tabla: \"" + tabla + "\". Con todos sus datos incluidos.");
+				res = ejecutarComando("DROP TABLE " + tabla, true);
+				System.out.println("Tabla " + "\"" + tabla + "\" borrada correctamente.");
+				break;
+
+			case "medicamento", "medicamentos":
+				System.out.println("¡ATENCIÓN! Vas a borrar la tabla: \"" + tabla + "\". Con todos sus datos incluidos.");
+				res = ejecutarComando("DROP TABLE " + tabla, true);
+				System.out.println("Tabla " + "\"" + tabla + "\" borrada correctamente.");
+				break;
+
+			case "receta", "recetas":
+				
+				if(cantidadTablas > 1) {
+					System.out.println("No se puede borrar la tabla: \"" + tabla
+					+ "\" porque hace referencia a otras tablas (Foreign Keys).");
+				} else {
+					System.out.println("¡ATENCIÓN! Vas a borrar la tabla: \"" + tabla + "\". Con todos sus datos incluidos.");
+					res = ejecutarComando("DROP TABLE " + tabla, true);
+					System.out.println("Tabla " + "\"" + tabla + "\" borrada correctamente.");
+				}
+				
+				break;
+			}
+		} else if(tabla != null && tabla.equals("")) {
+			System.out.println("¡ATENCIÓN! Vas a borrar TODAS las tablas de la base de datos. Con todos sus datos incluidos.");
+			ejecutarComando("DROP TABLE Pacientes", true);
+			ejecutarComando("DROP TABLE Medicamentos", false);
+			res = ejecutarComando("DROP TABLE Recetas", false);
+			System.out.println("Todas las tablas borradas correctamente.");
+		}
 
 		return res;
 	}
