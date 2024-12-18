@@ -15,6 +15,7 @@ public class Metodos {
 	private static final String CONTA = "12345";
 	private static final String DB_URL = "jdbc:mysql://dns11036.phdns11.es/ad2425_avizarraga";
 	private static final String USE = "use ad2425_avizarraga;";
+	public static Scanner sc = new Scanner(System.in);
 
 	/**
 	 * Función que obtiene la última Id de una tabla pasada por parámetro y la
@@ -97,14 +98,14 @@ public class Metodos {
 	 * @return Un boolean indicando si se pudo ejecutar la consulta correctamente o
 	 *         no.
 	 */
-	private static boolean ejecutarComando(String sql, boolean transaction) {
+	private static boolean ejecutarComando(String sql, boolean transaction, Scanner obj) {
 		boolean res = false;
 		Statement stmt = null;
 		Connection connect = null;
 
 		String userInput = "";
 
-		Scanner sc = new Scanner(System.in);
+		
 
 		try {
 			connect = DriverManager.getConnection(DB_URL, USUARIO, CONTA);
@@ -122,7 +123,7 @@ public class Metodos {
 						+ "Una vez aplicados los cambios, no podrán deshacerse." + "\n"
 						+ "Escriba: \"Si\" para aplicar los cambios o: \"No\" para deshacerlos.");
 
-				userInput = sc.nextLine();
+				userInput = obj.nextLine();
 
 				userInput = userInput.replace("í", "i");
 
@@ -136,7 +137,7 @@ public class Metodos {
 
 			}
 
-			sc.close();
+			
 
 			res = true;
 		} catch (SQLException e) {
@@ -221,9 +222,9 @@ public class Metodos {
 				}
 			case "receta", "recetas":
 				if(condicion != null && !condicion.equals("")) {
-					sql = "SELECT * FROM Recetas WHERE " + condicion + ";";
+					sql = "SELECT * FROM Receta WHERE " + condicion + ";";
 				} else {
-					sql = "SELECT * FROM Recetas;";
+					sql = "SELECT * FROM Receta;";
 				}
 			
 			}
@@ -254,8 +255,8 @@ public class Metodos {
 
 		String tabla = "";
 
-		boolean existePacientes = ejecutarComando("SELECT * FROM Pacientes LIMIT 1", false);
-		boolean existeMedicamentos = ejecutarComando("SELECT * FROM Medicamentos LIMIT 1", false);
+		boolean existePacientes = ejecutarComando("SELECT * FROM Pacientes LIMIT 1", false, sc);
+		boolean existeMedicamentos = ejecutarComando("SELECT * FROM Medicamentos LIMIT 1", false, sc);
 
 		boolean connectionState = false;
 
@@ -308,7 +309,7 @@ public class Metodos {
 		}
 
 		if (!sql.equals("")) {
-			connectionState = ejecutarComando(sql, false);
+			connectionState = ejecutarComando(sql, false, sc);
 		}
 
 		if (!connectionState) {
@@ -348,7 +349,7 @@ public class Metodos {
 
 		case "pacientes", "paciente":
 
-			sql.append("( Nombre, NSS ) VALUES (");
+			sql.append("( Nombre, Apellidos, NSS ) VALUES (");
 
 			for (String campo : datos) {
 				sql.append("'" + campo + "',");
@@ -383,8 +384,11 @@ public class Metodos {
 
 		}
 
+		System.out.println(sql);
+		
 		if (!sql.toString().contains("")) {
-			connectionState = ejecutarComando(sql.toString(), false);
+			
+			connectionState = ejecutarComando(sql.toString(), false, sc);
 		}
 
 		if (!connectionState) {
@@ -426,13 +430,23 @@ public class Metodos {
 
 	public static String modificarDatosTabla(String tabla, String columna, String datos, String condicion) {
 		String res = "";
-
-		String sqlConsulta = "SELECT * " + "FROM " + tabla + " WHERE " + condicion + ";";
+		String sql = "";
+		String sqlConsulta = "";
+		
+		if(condicion != null && !condicion.equals("")) {
+			sqlConsulta = "SELECT * " + "FROM " + tabla + " WHERE " + condicion + ";";
+			sql = "UPDATE " + tabla + "SET" + columna + " = " + datos + " WHERE " + condicion
+					+ ";";
+		} else {
+			sqlConsulta = "SELECT * FROM " + tabla + ";";
+			sql = "UPDATE " + tabla + "SET" + columna + " = " + datos + ";";
+		}
+		
+		 
 
 		ResultSet datosOriginales;
 
-		String sql = "START TRANSACTION; UPDATE " + tabla + "SET " + columna + " = " + datos + " WHERE " + condicion
-				+ ";";
+		
 
 		try {
 
@@ -451,7 +465,7 @@ public class Metodos {
 
 		System.out.println(columna + ": " + datos);
 
-		boolean state = ejecutarComando(sql, true);
+		boolean state = ejecutarComando(sql, true, sc);
 
 		if (!state) {
 			res = "Error: No se pudo actualizar la tabla " + tabla;
@@ -470,7 +484,7 @@ public class Metodos {
 	 * @return Un int que devuelve cuántas tablas existen en la Base de datos.
 	 *         Devuelve 0 si no encuentra ninguna.
 	 */
-	private static int cuantasTablas() {
+	public static int cuantasTablas() {
 
 		int res = 0;
 
@@ -549,7 +563,7 @@ public class Metodos {
 			System.out.println("No se puede borrar la tabla: \"" + tabla
 					+ "\" porque hace referencia a otras tablas (Foreign Keys).");
 		} else {
-			res = ejecutarComando(sql, false);
+			res = ejecutarComando(sql, false, sc);
 		}
 
 		return res;
@@ -569,14 +583,16 @@ public class Metodos {
 			switch (nomTabla) {
 			case "paciente", "pacientes":
 				System.out.println("¡ATENCIÓN! Vas a borrar la tabla: \"" + tabla + "\". Con todos sus datos incluidos.");
-				res = ejecutarComando("DROP TABLE " + tabla, true);
+				res = ejecutarComando("SET FOREIGN_KEY_CHECKS=0; DROP TABLE Pacientes;", true, sc);
 				System.out.println("Tabla " + "\"" + tabla + "\" borrada correctamente.");
+				res = ejecutarComando("SET FOREIGN_KEY_CHECKS=1;", false, sc);
 				break;
 
 			case "medicamento", "medicamentos":
 				System.out.println("¡ATENCIÓN! Vas a borrar la tabla: \"" + tabla + "\". Con todos sus datos incluidos.");
-				res = ejecutarComando("DROP TABLE " + tabla, true);
+				res = ejecutarComando("SET FOREIGN_KEY_CHECKS=0; DROP TABLE Medicamentos;", true, sc);
 				System.out.println("Tabla " + "\"" + tabla + "\" borrada correctamente.");
+				res = ejecutarComando("SET FOREIGN_KEY_CHECKS=1;", false, sc);
 				break;
 
 			case "receta", "recetas":
@@ -586,17 +602,18 @@ public class Metodos {
 					+ "\" porque hace referencia a otras tablas (Foreign Keys).");
 				} else {
 					System.out.println("¡ATENCIÓN! Vas a borrar la tabla: \"" + tabla + "\". Con todos sus datos incluidos.");
-					res = ejecutarComando("DROP TABLE " + tabla, true);
+					res = ejecutarComando("SET FOREIGN_KEY_CHECKS=0; DROP TABLE Receta;", true, sc);
 					System.out.println("Tabla " + "\"" + tabla + "\" borrada correctamente.");
+					res = ejecutarComando("SET FOREIGN_KEY_CHECKS=1;", false, sc);
 				}
 				
 				break;
 			}
 		} else if(tabla != null && tabla.equals("")) {
 			System.out.println("¡ATENCIÓN! Vas a borrar TODAS las tablas de la base de datos. Con todos sus datos incluidos.");
-			ejecutarComando("DROP TABLE Pacientes", true);
-			ejecutarComando("DROP TABLE Medicamentos", false);
-			res = ejecutarComando("DROP TABLE Recetas", false);
+			ejecutarComando("DROP TABLE Pacientes", true, sc);
+			ejecutarComando("DROP TABLE Medicamentos", false, sc);
+			res = ejecutarComando("DROP TABLE Recetas", false, sc);
 			System.out.println("Todas las tablas borradas correctamente.");
 		}
 
