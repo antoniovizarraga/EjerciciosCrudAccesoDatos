@@ -1,6 +1,7 @@
 package crud;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -9,6 +10,8 @@ import java.sql.Statement;
 import java.text.Normalizer;
 import java.util.Scanner;
 
+
+
 public class Metodos {
 
 	private static final String USUARIO = "avizarraga";
@@ -16,6 +19,18 @@ public class Metodos {
 	private static final String DB_URL = "jdbc:mysql://dns11036.phdns11.es/ad2425_avizarraga";
 	private static final String USE = "use ad2425_avizarraga;";
 	public static Scanner sc = new Scanner(System.in);
+	private static Statement stmt = null;
+	private static Connection connect = null;
+	
+	
+	private static void inicio() {
+		try {
+			connect = DriverManager.getConnection(DB_URL, USUARIO, CONTA);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	/**
 	 * Función que obtiene la última Id de una tabla pasada por parámetro y la
@@ -100,8 +115,7 @@ public class Metodos {
 	 */
 	private static boolean ejecutarComando(String sql, boolean transaction, Scanner obj) {
 		boolean res = false;
-		Statement stmt = null;
-		Connection connect = null;
+		
 
 		String userInput = "";
 
@@ -114,6 +128,8 @@ public class Metodos {
 			stmt = connect.createStatement();
 
 			stmt.execute(USE);
+			
+			
 
 			stmt.execute(sql);
 
@@ -174,7 +190,7 @@ public class Metodos {
 	 */
 	private static ResultSet ejecutarConsulta(String sql) {
 
-		Connection connect = null;
+		
 
 		ResultSet resultado = null;
 
@@ -268,7 +284,7 @@ public class Metodos {
 
 		case "pacientes", "paciente":
 			sql = "CREATE TABLE Pacientes(\r\n" + "idPaciente Int NOT NULL AUTO_INCREMENT,\r\n"
-					+ "Nombre VarChar(45),\r\n" + "NSS VarChar(45),\r\n" + "PRIMARY KEY (idPaciente)\r\n" + ");";
+					+ "Nombre VarChar(45),\r\n" + "Apellidos VarChar(45),\r\n" + "NSS VarChar(45),\r\n" + "PRIMARY KEY (idPaciente)\r\n" + ");";
 			res = "Tabla Pacientes creada correctamente";
 			break;
 
@@ -284,8 +300,8 @@ public class Metodos {
 			} else {
 				sql = "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int NOT NULL AUTO_INCREMENT,\r\n"
 						+ "idPaciente Int,\r\n" + "idMedicamento Int,\r\n" + "fechaFin DATE,\r\n"
-						+ "FOREIGN KEY (idPaciente) REFERENCES Pacientes(idPaciente),\r\n"
-						+ "FOREIGN KEY (idMedicamento) REFERENCES Medicamentos(idMedicamento),\r\n"
+						+ "FOREIGN KEY (idPaciente) REFERENCES Pacientes(idPaciente) ON DELETE CASCADE,\r\n"
+						+ "FOREIGN KEY (idMedicamento) REFERENCES Medicamentos(idMedicamento) ON DELETE CASCADE,\r\n"
 						+ "PRIMARY KEY (idReceta)\r\n" + ");";
 				res = "Tabla Receta creada correctamente";
 			}
@@ -301,8 +317,8 @@ public class Metodos {
 
 			sql += "\r\n" + "CREATE TABLE Receta(\r\n" + "idReceta Int NOT NULL AUTO_INCREMENT,\r\n"
 					+ "idPaciente Int,\r\n" + "idMedicamento Int,\r\n" + "fechaFin DATE,\r\n"
-					+ "FOREIGN KEY (idPaciente) REFERENCES Pacientes(idPaciente),\r\n"
-					+ "FOREIGN KEY (idMedicamento) REFERENCES Medicamentos(idMedicamento),\r\n"
+					+ "FOREIGN KEY (idPaciente) REFERENCES Pacientes(idPaciente) ON DELETE CASCADE,\r\n"
+					+ "FOREIGN KEY (idMedicamento) REFERENCES Medicamentos(idMedicamento) ON DELETE CASCADE,\r\n"
 					+ "PRIMARY KEY (idReceta)\r\n" + ");";
 			res = "Creación de todas las tablas realizada correctamente.";
 
@@ -337,7 +353,7 @@ public class Metodos {
 
 		StringBuilder sql = new StringBuilder();
 
-		sql.append("INSERT INTO " + tabla + " ");
+		sql.append("INSERT INTO ");
 
 		String[] datos = datosTabla.split("\n");
 
@@ -349,7 +365,7 @@ public class Metodos {
 
 		case "pacientes", "paciente":
 
-			sql.append("( Nombre, Apellidos, NSS ) VALUES (");
+			sql.append("Pacientes ( Nombre, Apellidos, NSS ) VALUES (");
 
 			for (String campo : datos) {
 				sql.append("'" + campo + "',");
@@ -363,13 +379,13 @@ public class Metodos {
 
 		case "medicamentos", "medicamento":
 
-			sql.append("( Composición ) VALUES (" + datosTabla + ");");
+			sql.append("Medicamentos ( Composición ) VALUES (" + datosTabla + ");");
 
 			break;
 
 		case "receta", "recetas":
 
-			sql.append("( idPaciente, idMedicamento, fechaFin ) VALUES (");
+			sql.append("Receta ( idPaciente, idMedicamento, fechaFin ) VALUES (");
 
 			for (String campo : datos) {
 
@@ -386,7 +402,7 @@ public class Metodos {
 
 		System.out.println(sql);
 		
-		if (!sql.toString().contains("")) {
+		if (!sql.toString().equalsIgnoreCase("")) {
 			
 			connectionState = ejecutarComando(sql.toString(), false, sc);
 		}
@@ -500,6 +516,27 @@ public class Metodos {
 
 		return res;
 	}
+	
+	public static boolean existenTablas(String nomTabla) {
+		
+		boolean tExists = false;
+		
+		inicio();
+		
+	    try (ResultSet rs = connect.getMetaData().getTables(null, null, nomTabla, null)) {
+	        while (rs.next()) { 
+	            String tName = rs.getString("TABLE_NAME");
+	            if (tName != null && tName.equals(nomTabla)) {
+	                tExists = true;
+	                break;
+	            }
+	        }
+	    } catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	    return tExists;
+	}
 
 	public static boolean borrarDatos(String tabla, String condicion) {
 		boolean res = false;
@@ -583,7 +620,8 @@ public class Metodos {
 			switch (nomTabla) {
 			case "paciente", "pacientes":
 				System.out.println("¡ATENCIÓN! Vas a borrar la tabla: \"" + tabla + "\". Con todos sus datos incluidos.");
-				res = ejecutarComando("SET FOREIGN_KEY_CHECKS=0; DROP TABLE Pacientes;", true, sc);
+				ejecutarComando("SET FOREIGN_KEY_CHECKS=0;", false, sc);
+				res = ejecutarComando("DROP TABLE Pacientes;", true, sc);
 				System.out.println("Tabla " + "\"" + tabla + "\" borrada correctamente.");
 				res = ejecutarComando("SET FOREIGN_KEY_CHECKS=1;", false, sc);
 				break;
@@ -597,7 +635,7 @@ public class Metodos {
 
 			case "receta", "recetas":
 				
-				if(cantidadTablas > 1) {
+				if(existenTablas("Pacientes") && existenTablas("Medicamentos")) {
 					System.out.println("No se puede borrar la tabla: \"" + tabla
 					+ "\" porque hace referencia a otras tablas (Foreign Keys).");
 				} else {
@@ -611,9 +649,11 @@ public class Metodos {
 			}
 		} else if(tabla != null && tabla.equals("")) {
 			System.out.println("¡ATENCIÓN! Vas a borrar TODAS las tablas de la base de datos. Con todos sus datos incluidos.");
+			ejecutarComando("SET FOREIGN_KEY_CHECKS=0;", false, sc);
 			ejecutarComando("DROP TABLE Pacientes", true, sc);
 			ejecutarComando("DROP TABLE Medicamentos", false, sc);
 			res = ejecutarComando("DROP TABLE Recetas", false, sc);
+			ejecutarComando("SET FOREIGN_KEY_CHECKS=1;", false, sc);
 			System.out.println("Todas las tablas borradas correctamente.");
 		}
 

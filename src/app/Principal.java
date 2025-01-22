@@ -185,9 +185,11 @@ public class Principal {
 								break;
 							
 							}
+						} else {
+							state = Metodos.eliminarTablas(tabla);
 						}
 						
-						state = Metodos.eliminarTablas(tabla);
+						
 						
 						
 
