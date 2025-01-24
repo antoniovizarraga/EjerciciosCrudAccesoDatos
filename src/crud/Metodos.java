@@ -6,6 +6,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLSyntaxErrorException;
 import java.sql.Statement;
 import java.text.Normalizer;
 import java.util.Scanner;
@@ -123,7 +124,7 @@ public class Metodos {
 
 		try {
 			connect = DriverManager.getConnection(DB_URL, USUARIO, CONTA);
-			connect.setAutoCommit(!transaction);
+			connect.setAutoCommit(false);
 
 			stmt = connect.createStatement();
 
@@ -151,6 +152,8 @@ public class Metodos {
 					System.out.println("Cambios deshechos.");
 				}
 
+			} else {
+				connect.commit();
 			}
 
 			
@@ -223,33 +226,61 @@ public class Metodos {
 			switch(nomTabla) {
 			
 			case "paciente", "pacientes":
-				if(condicion != null && !condicion.equals("")) {
-					sql = "SELECT * FROM Pacientes WHERE " + condicion + ";";
+				
+				if(existenTablas("Pacientes")) {
+					if(condicion != null && !condicion.equals("")) {
+						sql = "SELECT * FROM Pacientes WHERE " + condicion + ";";
+					} else {
+						sql = "SELECT * FROM Pacientes;";
+					}
 				} else {
-					sql = "SELECT * FROM Pacientes;";
+					System.out.println("La tabla: \"Pacientes\" no existe. Asegúrate de crear dicha tabla "
+							+ "primero si quieres listar los datos.");
 				}
+				
+				
 				
 				break;
 			case "medicamento", "medicamentos":
-				if(condicion != null && !condicion.equals("")) {
-					sql = "SELECT * FROM Medicamentos WHERE " + condicion + ";";
+				
+				if(existenTablas("Medicamentos")) {
+					if(condicion != null && !condicion.equals("")) {
+						sql = "SELECT * FROM Medicamentos WHERE " + condicion + ";";
+					} else {
+						sql = "SELECT * FROM Medicamentos;";
+					}
 				} else {
-					sql = "SELECT * FROM Medicamentos;";
+					System.out.println("La tabla: \"Medicamentos\" no existe. Asegúrate de crear dicha tabla "
+							+ "primero si quieres listar los datos.");
 				}
+				
+				
 				
 				break;
 			case "receta", "recetas":
-				if(condicion != null && !condicion.equals("")) {
-					sql = "SELECT * FROM Receta WHERE " + condicion + ";";
+				
+				if(existenTablas("Receta")) {
+					if(condicion != null && !condicion.equals("")) {
+						sql = "SELECT * FROM Receta WHERE " + condicion + ";";
+					} else {
+						sql = "SELECT * FROM Receta;";
+					}
+					
 				} else {
-					sql = "SELECT * FROM Receta;";
+					System.out.println("La tabla: \"Receta\" no existe. Asegúrate de crear primero "
+							+ "las tablas: \"Pacientes\" y \"Medicamentos\" para poder listar esta tabla.");
 				}
+				
 				break;
 			
 			}
 		} 
 		
-		res = ejecutarConsulta(sql);
+		if(sql != null && !sql.equals("")) {
+			res = ejecutarConsulta(sql);
+		}
+		
+		
 		
 		return res;
 	}
@@ -638,17 +669,15 @@ public class Metodos {
 
 			case "receta", "recetas":
 				
-				if(existenTablas("Pacientes") && existenTablas("Medicamentos")) {
-					System.out.println("No se puede borrar la tabla: \"" + tabla
-					+ "\" porque hace referencia a otras tablas (Foreign Keys).");
-				} else {
+				
 					System.out.println("¡ATENCIÓN! Vas a borrar la tabla: \"" + tabla + "\". Con todos sus datos incluidos.");
-					res = ejecutarComando("SET FOREIGN_KEY_CHECKS=0; DROP TABLE Receta;", true, sc);
+					ejecutarComando("SET FOREIGN_KEY_CHECKS=0;", false, sc);
+					res = ejecutarComando("DROP TABLE Receta;", true, sc);
 					System.out.println("Tabla " + "\"" + tabla + "\" borrada correctamente.");
 					res = ejecutarComando("SET FOREIGN_KEY_CHECKS=1;", false, sc);
-				}
 				
-				break;
+				
+					break;
 			}
 		} else if(tabla != null && tabla.equals("")) {
 			System.out.println("¡ATENCIÓN! Vas a borrar TODAS las tablas de la base de datos. Con todos sus datos incluidos.");

@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLSyntaxErrorException;
 import java.sql.Statement;
 import java.util.Scanner;
 
@@ -70,50 +71,56 @@ public class Principal {
 					System.out.println(
 							"Si quiere saber todos los datos de la tabla, deje el texto vacío y pulse la tecla enter.");
 					condicion = Metodos.sc.nextLine();
+					
 					resultadosConsulta = Metodos.listarTablas(tabla, condicion);
+					
+					if(resultadosConsulta != null) {
+						switch (nomTabla) {
 
-					switch (nomTabla) {
-
-					case "pacientes", "paciente":
-						try {
-							while (resultadosConsulta.next()) {
-								System.out.println("Id Paciente: " + resultadosConsulta.getInt(1));
-								System.out.println("Nombre: " + resultadosConsulta.getString(2));
-								System.out.println("Apellidos: " + resultadosConsulta.getString(3));
-								System.out.println("NSS: " + resultadosConsulta.getString(4));
+						case "pacientes", "paciente":
+							try {
+								while (resultadosConsulta.next()) {
+									System.out.println("Id Paciente: " + resultadosConsulta.getInt(1));
+									System.out.println("Nombre: " + resultadosConsulta.getString(2));
+									System.out.println("Apellidos: " + resultadosConsulta.getString(3));
+									System.out.println("NSS: " + resultadosConsulta.getString(4));
+								}
+							} catch (SQLException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
 							}
-						} catch (SQLException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-						break;
+							break;
 
-					case "medicamento", "medicamentos":
-						try {
-							while (resultadosConsulta.next()) {
-								System.out.println("Id Medicamento: " + resultadosConsulta.getInt(1));
-								System.out.println("Composición: " + resultadosConsulta.getString(2));
+						case "medicamento", "medicamentos":
+							try {
+								while (resultadosConsulta.next()) {
+									System.out.println("Id Medicamento: " + resultadosConsulta.getInt(1));
+									System.out.println("Composición: " + resultadosConsulta.getString(2));
+								}
+							} catch (SQLException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
 							}
-						} catch (SQLException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-						break;
-					case "receta", "recetas":
-						try {
-							while (resultadosConsulta.next()) {
-								System.out.println("Id receta: " + resultadosConsulta.getInt(1));
-								System.out.println("Id Paciente: " + resultadosConsulta.getInt(2));
-								System.out.println("Id Medicamento: " + resultadosConsulta.getInt(3));
-								System.out.println("Fecha Fin: " + resultadosConsulta.getDate(4));
+							break;
+						case "receta", "recetas":
+							try {
+								while (resultadosConsulta.next()) {
+									System.out.println("Id receta: " + resultadosConsulta.getInt(1));
+									System.out.println("Id Paciente: " + resultadosConsulta.getInt(2));
+									System.out.println("Id Medicamento: " + resultadosConsulta.getInt(3));
+									System.out.println("Fecha Fin: " + resultadosConsulta.getDate(4));
+								}
+							} catch (SQLException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
 							}
-						} catch (SQLException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-						break;
+							break;
 
+						}
 					}
+					
+
+					
 					
 					break;
 
@@ -280,7 +287,7 @@ public class Principal {
 							
 							System.out.println("Fecha Fin: ");
 							System.out.println("El formato de la fecha es:");
-							System.out.println("Ejemplo: 15-04-2024");
+							System.out.println("Ejemplo: 2024-04-15");
 							fechaFin = Metodos.sc.nextLine();
 							
 							datos = Integer.toString(idPaciente);
