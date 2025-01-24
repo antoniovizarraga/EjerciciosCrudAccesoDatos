@@ -236,12 +236,15 @@ public class Metodos {
 				} else {
 					sql = "SELECT * FROM Medicamentos;";
 				}
+				
+				break;
 			case "receta", "recetas":
 				if(condicion != null && !condicion.equals("")) {
 					sql = "SELECT * FROM Receta WHERE " + condicion + ";";
 				} else {
 					sql = "SELECT * FROM Receta;";
 				}
+				break;
 			
 			}
 		} 

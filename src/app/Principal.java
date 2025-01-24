@@ -256,10 +256,12 @@ public class Principal {
 							
 							
 							System.out.println("Composición: ");
-							composicion = Metodos.sc.nextLine();
+							composicion = "\"";
+							composicion += Metodos.sc.nextLine();
 							
+							composicion += "\"";
 							
-							datos += composicion;
+							datos = composicion;
 							
 							System.out.println(Metodos.insertarDatos(tabla, datos));	
 						
@@ -273,6 +275,8 @@ public class Principal {
 							
 							System.out.println("Id Medicamento: ");
 							idMedicamento = Metodos.sc.nextInt();
+							
+							Metodos.sc.nextLine();
 							
 							System.out.println("Fecha Fin: ");
 							System.out.println("El formato de la fecha es:");
