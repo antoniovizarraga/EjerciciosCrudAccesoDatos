@@ -305,8 +305,8 @@ public class Metodos {
 
 		String tabla = "";
 
-		boolean existePacientes = ejecutarComando("SELECT * FROM Pacientes LIMIT 1", false, sc);
-		boolean existeMedicamentos = ejecutarComando("SELECT * FROM Medicamentos LIMIT 1", false, sc);
+		boolean existePacientes = existenTablas("Pacientes");
+		boolean existeMedicamentos = existenTablas("Medicamentos");
 
 		boolean connectionState = false;
 

@@ -164,7 +164,7 @@ public class Principal {
 						System.out.println("Todas las tablas creadas.");
 					}
 					
-					Metodos.sc.nextLine();
+					
 
 					break;
 				case 3:
@@ -311,7 +311,26 @@ public class Principal {
 					
 					tabla = Metodos.sc.nextLine();
 					
+					
+					
 					if(tabla != null && !tabla.equals("")) {
+						
+						nomTabla = tabla.toLowerCase();
+						
+						switch(nomTabla) {
+						
+						case "paciente", "pacientes":
+							tabla = "Pacientes";
+							break;
+						case "medicamento", "medicamentos":
+							tabla = "Medicamentos";
+							break;
+						case "receta", "recetas":
+							tabla = "Receta";
+							break;
+						
+						}
+						
 						System.out.println("Indique la condición para borrar datos de la tabla. Si quiere borrar todos los datos de la tabla, pulse Enter.");
 						System.out.println("Escriba la condición siguiendo el siguiente formato de ejemplo: \"id=4\".");
 						condicion = Metodos.sc.nextLine();
