@@ -222,9 +222,11 @@ public class Principal {
 							datos = Metodos.sc.nextLine();
 							
 							if(datos != null && !datos.equals("")) {
-								System.out.println(Metodos.modificarDatosTabla(nomTabla, columna, datos, condicion));
+								System.out.println(Metodos.modificarDatosTabla(tabla, columna, datos, condicion));
 							}
 						}
+						
+						
 						
 					}
 					
