@@ -19,6 +19,7 @@ public class Metodos {
 	private static final String USE = "use ad2425_avizarraga;";
 	public static Scanner sc = new Scanner(System.in);
 	private static Statement stmt = null;
+	private static PreparedStatement prstmt = null;
 	private static Connection connect = null;
 
 	private static void inicio() {
@@ -486,7 +487,7 @@ public class Metodos {
 
 		if (condicion != null && !condicion.equals("")) {
 			sqlConsulta = "SELECT * " + "FROM " + nomTabla + " WHERE " + condicion + ";";
-			sql = "UPDATE " + nomTabla + " SET " + columna + " = " + datos + " WHERE " + condicion + ";";
+			sql = "UPDATE " + nomTabla + " SET " + columna + " = " + " ? WHERE " + condicion + ";";
 		} else {
 			sqlConsulta = "SELECT * FROM " + nomTabla + ";";
 			sql = "UPDATE " + nomTabla + " SET " + columna + " = " + datos + ";";
@@ -502,24 +503,25 @@ public class Metodos {
 
 			while (datosOriginales.next()) {
 				System.out.println(columna + ": " + datosOriginales.getString(columna));
+
 			}
+			System.out.println("Datos después de la modificación: ");
+
+			System.out.println(columna + ": " + datos);
+			
+			prstmt = connect.prepareStatement(sql);
+
+			prstmt.setString(1, datos);
+			
+			prstmt.executeUpdate();
+
 		} catch (SQLException ex) {
 			System.out.println("Error al obtener los datos originales: " + ex.getMessage());
 		}
 
-		System.out.println("Datos después de la modificación: ");
+		//boolean state = ejecutarComando(sql, true, sc);
 
-		System.out.println(columna + ": " + datos);
-
-		boolean state = ejecutarComando(sql, true, sc);
-
-		if (!state) {
-			res = "Error: No se pudo actualizar la tabla " + tabla;
-
-		} else {
-
-			res = "Los datos se actualizaron correctamente.";
-		}
+		
 
 		return res;
 	}
