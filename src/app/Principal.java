@@ -224,6 +224,14 @@ public class Principal {
 							if(datos != null && !datos.equals("")) {
 								System.out.println(Metodos.modificarDatosTabla(tabla, columna, datos, condicion));
 							}
+						} else if(condicion != null && condicion.equals("")) {
+							System.out.println("Introduzca la columna en la que quiera establecer el valor: ");
+							columna = Metodos.sc.nextLine();
+							
+							System.out.println("Introduzca el dato o valor que quiera introducir en la columna: ");
+							datos = Metodos.sc.nextLine();
+							
+							System.out.println(Metodos.modificarDatosTabla(tabla, columna, datos, condicion));
 						}
 						
 						
